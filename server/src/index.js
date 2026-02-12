@@ -4,6 +4,8 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const transcribeRouter = require('./routes/transcribe');
+const downloadRouter = require('./routes/download');
+const cleanup = require('./services/cleanup');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -12,6 +14,7 @@ app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 
 app.use('/api/transcribe', transcribeRouter);
+app.use('/api/download', downloadRouter);
 
 // Serve built React client in production
 const clientDist = path.join(__dirname, '../../client/dist');
@@ -37,4 +40,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  cleanup.startCleanupJob();
 });

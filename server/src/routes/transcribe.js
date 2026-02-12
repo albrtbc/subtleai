@@ -6,6 +6,7 @@ const whisperService = require('../services/whisper');
 const srtFormatter = require('../services/srtFormatter');
 const srtRestructurer = require('../services/srtRestructurer');
 const translator = require('../services/translator');
+const storageManager = require('../services/storageManager');
 
 function sendProgress(res, data) {
   res.write(JSON.stringify({ type: 'progress', ...data }) + '\n');
@@ -40,7 +41,7 @@ router.post('/', upload.single('audio'), async (req, res) => {
       return;
     }
 
-    const { sourceLanguage, outputLanguage } = req.body;
+    const { sourceLanguage, outputLanguage, jobId } = req.body;
 
     // Step 1: Transcribe with Whisper large-v3 via Groq
     sendProgress(res, {
@@ -103,11 +104,21 @@ router.post('/', upload.single('audio'), async (req, res) => {
     const lastResSeg = restructured[restructured.length - 1];
     console.log(`[pipeline] After restructure: ${restructured.length} segments, last ends at ${lastResSeg ? lastResSeg.end.toFixed(1) : 0}s`);
 
+    // Save SRT to storage if jobId provided
+    if (jobId) {
+      storageManager.saveSrt(jobId, srtContent, {
+        originalFilename: file.originalname,
+        detectedLanguage,
+        duration: transcription.duration,
+      });
+    }
+
     // Cleanup uploaded file
     fs.unlink(file.path, () => {});
 
     sendResult(res, {
       srt: srtContent,
+      jobId: jobId || null,
       detectedLanguage,
       duration: transcription.duration,
     });

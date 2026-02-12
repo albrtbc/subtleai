@@ -2,19 +2,23 @@ import { useState, useRef, useCallback } from 'react';
 
 const MAX_SIZE = 250 * 1024 * 1024;
 
-export default function DropZone({ file, onFileSelect, disabled }) {
+export default function DropZone({ onFilesSelect, disabled }) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef(null);
 
-  const handleFile = useCallback(
-    (f) => {
-      if (f.size > MAX_SIZE) {
-        alert(`File is too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is 250MB.`);
-        return;
+  const validateAndSelect = useCallback(
+    (fileList) => {
+      const valid = [];
+      for (const f of fileList) {
+        if (f.size > MAX_SIZE) {
+          alert(`"${f.name}" is too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is 250MB.`);
+        } else {
+          valid.push(f);
+        }
       }
-      onFileSelect(f);
+      if (valid.length > 0) onFilesSelect(valid);
     },
-    [onFileSelect],
+    [onFilesSelect],
   );
 
   const handleDrop = useCallback(
@@ -22,10 +26,10 @@ export default function DropZone({ file, onFileSelect, disabled }) {
       e.preventDefault();
       setIsDragging(false);
       if (disabled) return;
-      const f = e.dataTransfer.files[0];
-      if (f) handleFile(f);
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > 0) validateAndSelect(files);
     },
-    [disabled, handleFile],
+    [disabled, validateAndSelect],
   );
 
   const handleDragOver = (e) => {
@@ -36,7 +40,9 @@ export default function DropZone({ file, onFileSelect, disabled }) {
   const handleDragLeave = () => setIsDragging(false);
 
   const handleInputChange = (e) => {
-    if (e.target.files[0]) handleFile(e.target.files[0]);
+    const files = Array.from(e.target.files);
+    if (files.length > 0) validateAndSelect(files);
+    e.target.value = '';
   };
 
   return (
@@ -53,35 +59,18 @@ export default function DropZone({ file, onFileSelect, disabled }) {
         ref={inputRef}
         type="file"
         accept="audio/*"
+        multiple
         onChange={handleInputChange}
         className="hidden"
       />
-      {file ? (
-        <div className="space-y-2">
-          <p className="text-lg font-medium">{file.name}</p>
-          <p className="text-sm text-gray-400">
-            {(file.size / 1024 / 1024).toFixed(2)} MB
-          </p>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFileSelect(null);
-            }}
-            className="text-red-400 text-sm hover:underline"
-          >
-            Remove
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <div className="text-4xl text-gray-500">&#x1F3B5;</div>
-          <p className="text-lg">Drag and drop an audio file here</p>
-          <p className="text-sm text-gray-400">or click to browse</p>
-          <p className="text-xs text-gray-500">
-            Supports: MP3, MP4, WAV, WebM, M4A (max 250MB)
-          </p>
-        </div>
-      )}
+      <div className="space-y-2">
+        <div className="text-4xl text-gray-500">&#x1F3B5;</div>
+        <p className="text-lg">Drag and drop audio files here</p>
+        <p className="text-sm text-gray-400">or click to browse</p>
+        <p className="text-xs text-gray-500">
+          Supports: MP3, MP4, WAV, WebM, M4A (max 250MB per file)
+        </p>
+      </div>
     </div>
   );
 }

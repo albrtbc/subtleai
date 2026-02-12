@@ -7,7 +7,9 @@ services:
       - .env
     volumes:
       - uploads:/app/server/uploads
+      - srt-output:/app/server/srt-output
     restart: unless-stopped
 
 volumes:
   uploads:
+  srt-output:

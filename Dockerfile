@@ -21,8 +21,8 @@ COPY server/src/ ./server/src/
 # Copy built client from stage 1
 COPY --from=client-build /app/client/dist ./client/dist
 
-# Create uploads directory
-RUN mkdir -p server/uploads
+# Create uploads and srt-output directories
+RUN mkdir -p server/uploads server/srt-output
 
 EXPOSE 3001
 CMD ["node", "server/src/index.js"]

@@ -4,9 +4,13 @@
  *
  * @param {FormData} formData
  * @param {(event: object) => void} onProgress
- * @returns {Promise<{srt: string, detectedLanguage: string, duration: number}>}
+ * @param {string} [jobId] - Optional job ID for server-side storage
+ * @returns {Promise<{srt: string, jobId: string, detectedLanguage: string, duration: number}>}
  */
-export async function transcribe(formData, onProgress) {
+export async function transcribe(formData, onProgress, jobId) {
+  if (jobId) {
+    formData.append('jobId', jobId);
+  }
   const response = await fetch('/api/transcribe', {
     method: 'POST',
     body: formData,
