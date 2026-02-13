@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/albrtbc/subtleai/compare/v1.0.2...v1.0.3) (2026-02-13)
+
+
+### Bug Fixes
+
+* use PAT for semantic-release to trigger Docker tag builds ([b42f356](https://github.com/albrtbc/subtleai/commit/b42f3567e938e4133a66ffa25e432522c7a021c9))
+
 ## [1.0.2](https://github.com/albrtbc/subtleai/compare/v1.0.1...v1.0.2) (2026-02-13)
 
 
