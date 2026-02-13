@@ -11,18 +11,6 @@ permissions:
   contents: read
 
 jobs:
-  # CodeRabbit AI Review
-  coderabbit:
-    runs-on: ubuntu-latest
-    name: CodeRabbit Review
-    steps:
-      - name: CodeRabbit Review
-        uses: coderabbitai/ai-review-action@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Optional: Configure review focus areas
-          api_key: ${{ secrets.CODERABBIT_API_KEY }}
-
   # Run Tests if they exist
   test:
     runs-on: ubuntu-latest
@@ -135,13 +123,12 @@ jobs:
 
       - name: Check for secrets
         uses: gitleaks/gitleaks-action@v2
-        with:
-          fail: false
-          verbose: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Summary status
   pr-summary:
-    needs: [coderabbit, test, lint, build, security]
+    needs: [test, lint, build, security]
     runs-on: ubuntu-latest
     name: PR Status Summary
     if: always()
@@ -152,7 +139,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 🤖 CodeRabbit AI Review | ${{ needs.coderabbit.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🧪 Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🎯 Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🏗️ Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
