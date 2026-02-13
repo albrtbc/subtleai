@@ -181,7 +181,7 @@ function filterHallucinations(segments) {
   return filtered;
 }
 
-async function transcribeSingle(groq, filePath, language) {
+async function transcribeSingle(groq, filePath, language, signal) {
   const params = {
     file: fs.createReadStream(filePath),
     model: 'whisper-large-v3',
@@ -193,7 +193,8 @@ async function transcribeSingle(groq, filePath, language) {
     params.language = language;
   }
 
-  return groq.audio.transcriptions.create(params);
+  const options = signal ? { signal } : {};
+  return groq.audio.transcriptions.create(params, options);
 }
 
 /**
@@ -202,7 +203,7 @@ async function transcribeSingle(groq, filePath, language) {
  * @param {string} groqApiKey
  * @param {(info: {chunk: number, totalChunks: number}) => void} [onProgress]
  */
-async function transcribe(filePath, language, groqApiKey, onProgress) {
+async function transcribe(filePath, language, groqApiKey, onProgress, signal) {
   const groq = new OpenAI({
     apiKey: groqApiKey,
     baseURL: GROQ_BASE_URL,
@@ -218,7 +219,7 @@ async function transcribe(filePath, language, groqApiKey, onProgress) {
   if (!needsChunking) {
     console.log(`File is ${(fileSize / 1024 / 1024).toFixed(1)}MB, ${totalDuration.toFixed(1)}s — sending directly`);
     if (onProgress) onProgress({ chunk: 1, totalChunks: 1 });
-    const response = await transcribeSingle(groq, filePath, language);
+    const response = await transcribeSingle(groq, filePath, language, signal);
     const segments = filterHallucinations(response.segments || []);
     return {
       language: response.language,
@@ -242,11 +243,17 @@ async function transcribe(filePath, language, groqApiKey, onProgress) {
     let timeOffset = 0;
 
     for (let i = 0; i < chunks.length; i++) {
+      if (signal?.aborted) {
+        const err = new Error('Job cancelled');
+        err.code = 'CANCELLED';
+        throw err;
+      }
+
       console.log(`Transcribing chunk ${i + 1}/${chunks.length}...`);
       if (onProgress) onProgress({ chunk: i + 1, totalChunks: chunks.length });
 
       const chunkDur = await getAudioDuration(chunks[i]);
-      const response = await transcribeSingle(groq, chunks[i], language);
+      const response = await transcribeSingle(groq, chunks[i], language, signal);
 
       if (!detectedLanguage) {
         detectedLanguage = response.language;

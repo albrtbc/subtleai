@@ -24,20 +24,25 @@ export async function getServerConfig() {
  * @param {string} [jobId] - Optional job ID for server-side storage
  * @returns {Promise<{srt: string, jobId: string, detectedLanguage: string, duration: number}>}
  */
-export async function transcribe(formData, onProgress, jobId) {
+export async function transcribe(formData, onProgress, jobId, { signal } = {}) {
   if (jobId) {
     formData.append('jobId', jobId);
   }
 
   // Create AbortController for timeout (30 minutes max for large files)
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30 * 60 * 1000);
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), 30 * 60 * 1000);
+
+  // Combine external signal (user cancel) with timeout signal
+  const combinedSignal = signal
+    ? AbortSignal.any([signal, timeoutController.signal])
+    : timeoutController.signal;
 
   try {
     const response = await fetch('/api/transcribe', {
       method: 'POST',
       body: formData,
-      signal: controller.signal,
+      signal: combinedSignal,
     });
 
   if (!response.ok && !response.body) {
@@ -96,6 +101,9 @@ export async function transcribe(formData, onProgress, jobId) {
     return result;
   } catch (err) {
     if (err.name === 'AbortError') {
+      if (signal?.aborted) {
+        throw new Error('Request was cancelled');
+      }
       throw new Error('Request timeout - processing took too long (max 30 minutes)');
     }
     throw err;
