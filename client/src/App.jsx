@@ -72,59 +72,62 @@ export default function App() {
     lastProcessingCountRef.current = processingCount;
   }, [jobs]);
 
-  // Keep refs updated with latest closures
-  processNextJobsRef.current = () => {
-    const currentJobs = jobsRef.current;
-    const processingCount = currentJobs.filter((j) => j.status === 'processing').length;
-    const availableSlots = MAX_CONCURRENT - processingCount;
-    if (availableSlots <= 0) return;
+  // Setup ref functions in effect to avoid ref access during render
+  useEffect(() => {
+    processNextJobsRef.current = () => {
+      const currentJobs = jobsRef.current;
+      const processingCount = currentJobs.filter((j) => j.status === 'processing').length;
+      const availableSlots = MAX_CONCURRENT - processingCount;
+      if (availableSlots <= 0) return;
 
-    const pending = currentJobs.filter((j) => j.status === 'pending');
-    const toStart = pending.slice(0, availableSlots);
+      const pending = currentJobs.filter((j) => j.status === 'pending');
+      const toStart = pending.slice(0, availableSlots);
 
-    for (const job of toStart) {
-      processJobRef.current(job);
-    }
-  };
+      for (const job of toStart) {
+        processJobRef.current(job);
+      }
+    };
 
-  processJobRef.current = async (job) => {
-    // Mark as processing in the ref immediately so concurrent calls
-    // see the correct count before React state updates
-    jobsRef.current = jobsRef.current.map((j) =>
-      j.id === job.id ? { ...j, status: 'processing', startTime: Date.now() } : j,
-    );
-    updateJobStatus(job.id, 'processing');
-    updateJobProgress(job.id, { step: 'transcribing', message: 'Uploading...', chunk: 0, totalChunks: 0 });
+    processJobRef.current = async (job) => {
+      jobsRef.current = jobsRef.current.map((j) =>
+        j.id === job.id ? { ...j, status: 'processing', startTime: Date.now() } : j,
+      );
+      updateJobStatus(job.id, 'processing');
+      updateJobProgress(job.id, { step: 'transcribing', message: 'Uploading...', chunk: 0, totalChunks: 0 });
 
-    const formData = new FormData();
-    formData.append('audio', job.file);
-    formData.append('sourceLanguage', sourceLanguage);
-    formData.append('outputLanguage', outputLanguage);
-    if (groqKey) formData.append('groqApiKey', groqKey);
+      const formData = new FormData();
+      formData.append('audio', job.file);
+      formData.append('sourceLanguage', sourceLanguage);
+      formData.append('outputLanguage', outputLanguage);
+      if (groqKey) formData.append('groqApiKey', groqKey);
 
-    try {
-      const result = await transcribe(formData, (event) => {
-        updateJobProgress(job.id, {
-          step: event.step,
-          message: event.message || '',
-          chunk: event.chunk,
-          totalChunks: event.totalChunks,
+      try {
+        const result = await transcribe(formData, (event) => {
+          updateJobProgress(job.id, {
+            step: event.step,
+            message: event.message || '',
+            chunk: event.chunk,
+            totalChunks: event.totalChunks,
+          });
+        }, job.id);
+
+        updateJobResult(job.id, {
+          jobId: result.jobId,
+          detectedLanguage: result.detectedLanguage,
+          duration: result.duration,
         });
-      }, job.id);
-
-      updateJobResult(job.id, {
-        jobId: result.jobId,
-        detectedLanguage: result.detectedLanguage,
-        duration: result.duration,
-      });
-    } catch (err) {
-      updateJobError(job.id, err.message || 'An error occurred');
-    }
-    // processNextJobs will be called automatically via useEffect when jobs state updates
-  };
+      } catch (err) {
+        updateJobError(job.id, err.message || 'An error occurred');
+      }
+    };
+  }, [sourceLanguage, outputLanguage, groqKey, updateJobStatus, updateJobProgress, updateJobResult, updateJobError]);
 
   // Stable function references that delegate to refs
-  const processNextJobs = useCallback(() => processNextJobsRef.current(), []);
+  const processNextJobs = useCallback(() => {
+    if (processNextJobsRef.current) {
+      processNextJobsRef.current();
+    }
+  }, []);
 
   const handleFilesSelected = useCallback(
     (files) => {
