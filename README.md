@@ -21,7 +21,7 @@ A full-stack web application that generates SRT subtitle files from audio and vi
 - **Tailwind CSS 4** - Styling
 
 ### Backend
-- **Node.js 20** - Runtime
+- **Node.js 18+** - Runtime
 - **Express 4** - Web framework
 - **Multer** - File upload handling
 - **GROQ API** - Whisper large-v3 transcription and Llama 3.3 70b translation
