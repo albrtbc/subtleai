@@ -10,6 +10,7 @@ const storageManager = require('../services/storageManager');
 const videoConverter = require('../services/videoConverter');
 const { isValidLanguage } = require('../config/languages');
 
+/** Send a progress event to the client via NDJSON stream. */
 function sendProgress(res, data) {
   if (res.writableEnded) return;
   try {
@@ -19,6 +20,7 @@ function sendProgress(res, data) {
   }
 }
 
+/** Send the final result to the client and close the NDJSON stream. */
 function sendResult(res, data) {
   if (res.writableEnded) return;
   try {
@@ -29,6 +31,7 @@ function sendResult(res, data) {
   }
 }
 
+/** Send an error to the client and close the NDJSON stream. */
 function sendError(res, error) {
   if (res.writableEnded) return;
   try {
@@ -39,6 +42,7 @@ function sendError(res, error) {
   }
 }
 
+/** Throw a CANCELLED error if the abort signal has been triggered. */
 function checkCancelled(signal) {
   if (signal.aborted) {
     const err = new Error('Job cancelled');
