@@ -7,12 +7,6 @@
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
     [
-      "@semantic-release/npm",
-      {
-        "npmPublish": false
-      }
-    ],
-    [
       "@semantic-release/git",
       {
         "assets": [
@@ -23,12 +17,6 @@
         "message": "chore(release): v${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
-    [
-      "@semantic-release/github",
-      {
-        "successComment": "🎉 This issue has been resolved in version ${nextRelease.version}",
-        "failTitle": "The automated release from the main branch failed"
-      }
-    ]
+    "@semantic-release/github"
   ]
 }
