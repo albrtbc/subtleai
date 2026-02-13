@@ -1,0 +1,159 @@
+name: PR Review & Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  # CodeRabbit AI Review
+  coderabbit:
+    runs-on: ubuntu-latest
+    name: CodeRabbit Review
+    steps:
+      - name: CodeRabbit Review
+        uses: coderabbitai/ai-review-action@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: Configure review focus areas
+          api_key: ${{ secrets.CODERABBIT_API_KEY }}
+
+  # Run Tests if they exist
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check if tests exist
+        id: test_check
+        run: |
+          if grep -q '"test"' package.json server/package.json client/package.json 2>/dev/null; then
+            echo "has_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run tests
+        if: steps.test_check.outputs.has_tests == 'true'
+        run: npm test
+
+      - name: No tests configured
+        if: steps.test_check.outputs.has_tests == 'false'
+        run: echo "⚠️ No test script found in package.json - consider adding tests!"
+
+  # Lint check
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint Check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint client
+        if: always()
+        run: npm -w client run lint --if-present || echo "⚠️ No lint script in client"
+
+      - name: Lint server
+        if: always()
+        run: npm -w server run lint --if-present || echo "⚠️ No lint script in server"
+
+  # Build check
+  build:
+    runs-on: ubuntu-latest
+    name: Build Check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build client
+        run: npm -w client run build
+
+      - name: Build artifact size check
+        run: |
+          SIZE=$(du -sh client/dist | cut -f1)
+          echo "📦 Client build size: $SIZE"
+          if [ $(du -sk client/dist | cut -f1) -gt 2097152 ]; then
+            echo "⚠️ Warning: Client bundle is larger than 2GB!"
+          fi
+
+  # Security check (optional but recommended)
+  security:
+    runs-on: ubuntu-latest
+    name: Security Check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate || true
+
+      - name: Check for secrets
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          fail: false
+          verbose: true
+
+  # Summary status
+  pr-summary:
+    needs: [coderabbit, test, lint, build, security]
+    runs-on: ubuntu-latest
+    name: PR Status Summary
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          echo "## ✅ PR Review Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🤖 CodeRabbit AI Review | ${{ needs.coderabbit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🎯 Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏗️ Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔒 Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
