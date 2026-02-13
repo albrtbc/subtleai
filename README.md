@@ -1,6 +1,6 @@
 # SubtleAI
 
-A full-stack web application that generates SRT subtitle files from audio and video files using AI-powered transcription. Built with React, Express, and powered by GROQ APIs.
+A full-stack web application that generates SRT subtitle files from audio and video files using AI-powered transcription. Built with React, Express, and powered by GROQ API.
 
 ## Features
 
@@ -10,7 +10,7 @@ A full-stack web application that generates SRT subtitle files from audio and vi
 - **Auto-Download**: Automatically download completed SRT files
 - **Queue Management**: Manage pending, processing, and completed jobs
 - **Large File Support**: Handle files up to 10GB
-- **Multiple AI Providers**: Support for both GROQ and OpenAI transcription APIs
+- **Docker Ready**: Run anywhere with official Docker images available on DockerHub
 
 ## Tech Stack
 
@@ -24,7 +24,8 @@ A full-stack web application that generates SRT subtitle files from audio and vi
 - **Node.js** - Runtime
 - **Express 4** - Web framework
 - **Multer** - File upload handling
-- **GROQ & OpenAI** - AI transcription providers
+- **GROQ API** - AI transcription provider
+- **FFmpeg** - Audio/video processing
 - **dotenv** - Environment configuration
 
 ## Prerequisites
@@ -38,8 +39,8 @@ Before running the application, you'll need:
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd srt-generator
+   git clone https://github.com/albrtbc/subtleai.git
+   cd subtleai
    ```
 
 2. **Install dependencies**
@@ -52,14 +53,30 @@ Before running the application, you'll need:
    cp .env.example .env
    ```
 
-4. **Add your API keys** to `.env`:
+4. **Add your API key** to `.env`:
    ```
-   GROQ_API_KEY=your_groq_key_here
-   OPENAI_API_KEY=your_openai_key_here
-   PORT=3001
+   GROQ_API_KEY=gsk_your-groq-key-here
    ```
 
    ⚠️ **Important**: Never commit the `.env` file. Keep your API keys private!
+
+## Docker Deployment
+
+Run with Docker using our official image:
+
+```bash
+docker run -p 3001:3001 -e GROQ_API_KEY=gsk_your-key-here gasbostation/subtleai:latest
+```
+
+Or with docker-compose:
+
+```bash
+cp .env.example .env
+# Edit .env with your GROQ_API_KEY
+docker-compose up -d
+```
+
+Available on DockerHub: [gasbostation/subtleai](https://hub.docker.com/repository/docker/gasbostation/subtleai)
 
 ## Development
 
@@ -92,10 +109,13 @@ This compiles both client and server, with the client built to `client/dist` and
 ## Project Structure
 
 ```
-srt-generator/
-├── client/                 # React frontend
+subtleai/
+├── .github/
+│   └── workflows/         # GitHub Actions CI/CD
+│
+├── client/                # React frontend
 │   ├── src/
-│   │   ├── components/    # React components (DropZone, FileJobList, etc.)
+│   │   ├── components/    # React components
 │   │   ├── services/      # API service functions
 │   │   ├── hooks/         # Custom hooks (useJobQueue)
 │   │   └── App.jsx        # Main app component
@@ -104,13 +124,17 @@ srt-generator/
 │
 ├── server/                # Express backend
 │   ├── src/
-│   │   ├── routes/        # API routes (transcribe, download)
+│   │   ├── routes/        # API routes (transcribe, download, config)
 │   │   ├── middleware/    # Express middleware (upload)
-│   │   ├── services/      # Business logic (storage, video conversion, etc.)
+│   │   ├── services/      # Business logic (transcription, translation, storage)
+│   │   ├── config/        # Configuration files
 │   │   └── index.js       # Express server entry point
 │   └── package.json       # Server dependencies
 │
+├── Dockerfile             # Docker image definition
+├── docker-compose.yml     # Docker Compose configuration
 ├── .env.example           # Example environment variables
+├── .releaserc.json        # Semantic versioning config
 ├── package.json           # Root workspace configuration
 └── README.md              # This file
 ```
@@ -193,9 +217,9 @@ The application handles common errors gracefully:
 ## Troubleshooting
 
 ### API Key Issues
-- Ensure API keys are valid and not expired
-- Check GROQ and OpenAI dashboards for usage limits
-- Try using the other provider if one fails
+- Ensure GROQ API key is valid and not expired
+- Check GROQ dashboard for usage limits and remaining quota
+- Regenerate key if experiencing authentication errors
 
 ### Upload Failures
 - Verify file format is supported (MP3, WAV, MP4, WebM, etc.)
@@ -207,18 +231,30 @@ The application handles common errors gracefully:
 - Clear Vite cache: `rm -rf client/dist .vite`
 - Update Node.js to version 16 or higher
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/). Versions are automatically generated based on conventional commits:
+- `fix:` → patch version (1.0.0 → 1.0.1)
+- `feat:` → minor version (1.0.0 → 1.1.0)
+- `BREAKING CHANGE:` → major version (1.0.0 → 2.0.0)
+
+See [Releases](https://github.com/albrtbc/subtleai/releases) for changelog and version history.
+
+## Docker Hub
+
+Official Docker images available at:
+- [gasbostation/subtleai:latest](https://hub.docker.com/repository/docker/gasbostation/subtleai)
+- [gasbostation/subtleai:1.0.2](https://hub.docker.com/repository/docker/gasbostation/subtleai)
+- [gasbostation/subtleai:1.0](https://hub.docker.com/repository/docker/gasbostation/subtleai)
+
 ## License
 
-[Add your license here - e.g., MIT, Apache 2.0, etc.]
-
-## Contributing
-
-[Add contribution guidelines if applicable]
+MIT License - See LICENSE file for details
 
 ## Support
 
-For issues or questions, please open an issue on the GitHub repository.
+For issues or questions, please open an issue on the [GitHub repository](https://github.com/albrtbc/subtleai/issues).
 
 ---
 
-**Note**: This application requires valid API keys from GROQ or OpenAI to function. Keep your API keys secure and never commit them to version control.
+**Note**: This application requires a valid GROQ API key to function. Keep your API keys secure and never commit them to version control.
