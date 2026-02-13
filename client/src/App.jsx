@@ -5,7 +5,7 @@ import LanguageSelector from './components/LanguageSelector';
 import ApiKeyInput from './components/ApiKeyInput';
 import AutoDownloadToggle from './components/AutoDownloadToggle';
 import FileJobList from './components/FileJobList';
-import { transcribe } from './services/api';
+import { transcribe, getServerConfig } from './services/api';
 import { useJobQueue } from './hooks/useJobQueue';
 
 const MAX_CONCURRENT = 3;
@@ -19,6 +19,8 @@ export default function App() {
   const [autoDownload, setAutoDownload] = useState(
     () => localStorage.getItem('auto_download') !== 'false',
   );
+  const [serverHasApiKey, setServerHasApiKey] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const {
     jobs,
@@ -40,6 +42,18 @@ export default function App() {
   const processJobRef = useRef();
   const processNextJobsRef = useRef();
   const lastProcessingCountRef = useRef(0);
+
+  // Check if server has API key configured on mount
+  useEffect(() => {
+    getServerConfig()
+      .then((config) => {
+        setServerHasApiKey(config.hasGroqApiKey);
+        setConfigLoaded(true);
+      })
+      .catch(() => {
+        setConfigLoaded(true);
+      });
+  }, []);
 
   useEffect(() => {
     jobsRef.current = jobs;
@@ -146,7 +160,16 @@ export default function App() {
     <div className="min-h-screen bg-gray-950 text-gray-100">
       <Header />
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <ApiKeyInput value={groqKey} onChange={handleGroqKeyChange} />
+        {configLoaded && !serverHasApiKey && (
+          <ApiKeyInput value={groqKey} onChange={handleGroqKeyChange} />
+        )}
+        {configLoaded && serverHasApiKey && (
+          <div className="bg-green-500/10 border border-green-700/50 rounded-lg p-4">
+            <p className="text-sm text-green-400">
+              ✓ API key configured on server - no configuration needed
+            </p>
+          </div>
+        )}
         <DropZone onFilesSelect={handleFilesSelected} disabled={isProcessing} />
         <LanguageSelector
           sourceLanguage={sourceLanguage}

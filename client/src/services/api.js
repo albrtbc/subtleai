@@ -1,4 +1,21 @@
 /**
+ * Fetch server configuration (without exposing secrets)
+ * @returns {Promise<{hasGroqApiKey: boolean}>}
+ */
+export async function getServerConfig() {
+  try {
+    const response = await fetch('/api/config');
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    return await response.json();
+  } catch (err) {
+    console.error('Failed to fetch server config:', err);
+    return { hasGroqApiKey: false }; // Default to safe state
+  }
+}
+
+/**
  * Streams the transcription request and calls onProgress for each server event.
  * Uses NDJSON streaming (one JSON object per line).
  *

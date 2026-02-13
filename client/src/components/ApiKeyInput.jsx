@@ -38,7 +38,7 @@ export default function ApiKeyInput({ value, onChange }) {
           </div>
           <p className="text-xs text-gray-500">
             Used for both transcription (Whisper large-v3) and translation (LLaMA 3.3).
-            Stored in session memory (cleared when browser closes). Overrides the server .env key.
+            Stored in session memory (cleared when browser closes).
             <strong className="text-yellow-400 block mt-1">⚠️ Never share your API key - it expires when you close the browser.</strong>
           </p>
         </div>

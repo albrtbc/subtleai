@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const transcribeRouter = require('./routes/transcribe');
 const downloadRouter = require('./routes/download');
+const configRouter = require('./routes/config');
 const cleanup = require('./services/cleanup');
 const logger = require('./utils/logger');
 
@@ -40,6 +41,7 @@ logger.info('CORS enabled for', { origin: CORS_ORIGIN });
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 
+app.use('/api/config', configRouter);
 app.use('/api/transcribe', transcribeRouter);
 app.use('/api/download', downloadRouter);
 
