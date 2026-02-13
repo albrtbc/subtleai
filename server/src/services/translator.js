@@ -11,6 +11,7 @@ const SYSTEM_PROMPT = (targetLanguage) =>
 - Do NOT add, remove, merge, or split any subtitle entries
 Output ONLY the translated SRT content with no additional commentary.`;
 
+/** Translate a single batch of SRT entries using the GROQ LLM API. */
 async function translateBatch(groq, srtBatch, targetLanguage, signal) {
   const options = signal ? { signal } : {};
   const response = await groq.chat.completions.create({
@@ -25,6 +26,7 @@ async function translateBatch(groq, srtBatch, targetLanguage, signal) {
   return response.choices[0].message.content.trim();
 }
 
+/** Translate SRT content to the target language, splitting into batches if needed. */
 async function translate(srtContent, sourceLanguage, targetLanguage, groqApiKey, signal) {
   const groq = new OpenAI({
     apiKey: groqApiKey,

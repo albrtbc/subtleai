@@ -10,6 +10,7 @@ const MAX_CHUNK_SIZE = 24 * 1024 * 1024;
 
 const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
 
+/** Get the duration of an audio file in seconds using ffprobe. */
 async function getAudioDuration(filePath) {
   const { stdout } = await execFileAsync('ffprobe', [
     '-v', 'error',
@@ -20,6 +21,7 @@ async function getAudioDuration(filePath) {
   return parseFloat(stdout.trim());
 }
 
+/** Split an audio file into chunks of the given duration using ffmpeg. */
 async function splitAudio(filePath, chunkDurationSecs) {
   const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'srt-chunk-'));
   const outputPattern = path.join(tmpDir, 'chunk_%03d.mp3');
@@ -44,6 +46,7 @@ async function splitAudio(filePath, chunkDurationSecs) {
   };
 }
 
+/** Remove all files in a directory and then remove the directory itself. */
 async function cleanupDir(dirPath) {
   try {
     const files = await fs.promises.readdir(dirPath);
@@ -81,6 +84,7 @@ const HALLUCINATION_PATTERNS = [
   /^hasta\s+(la\s+pr[oó]xima|luego|pronto)\.?$/i,
 ];
 
+/** Normalize text for comparison by lowercasing and collapsing whitespace/punctuation. */
 function normalize(text) {
   return text.trim().toLowerCase().replace(/[.,!?¡¿;:\s]+/g, ' ').trim();
 }
@@ -181,6 +185,7 @@ function filterHallucinations(segments) {
   return filtered;
 }
 
+/** Transcribe a single audio file using the GROQ Whisper API. */
 async function transcribeSingle(groq, filePath, language, signal) {
   const params = {
     file: fs.createReadStream(filePath),
