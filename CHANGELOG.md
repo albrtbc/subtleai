@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/albrtbc/subtleai/compare/v1.0.3...v1.0.4) (2026-02-13)
+
+
+### Bug Fixes
+
+* trigger Docker build on release event instead of tag push ([35a5af9](https://github.com/albrtbc/subtleai/commit/35a5af9f584831cc9e4cc5f5fe487078a5e80d60))
+
 ## [1.0.3](https://github.com/albrtbc/subtleai/compare/v1.0.2...v1.0.3) (2026-02-13)
 
 
