@@ -5,11 +5,12 @@ A full-stack web application that generates SRT subtitle files from audio and vi
 ## Features
 
 - **Batch Processing**: Upload and process multiple files concurrently (up to 3 at a time)
+- **Job Cancellation**: Cancel in-progress transcription/translation jobs to avoid unnecessary API costs
 - **Multi-Language Support**: Auto-detect source language and translate to your target language
-- **Real-Time Progress**: Track transcription progress with detailed status updates
+- **Real-Time Progress**: Track transcription progress with NDJSON streaming updates
 - **Auto-Download**: Automatically download completed SRT files
 - **Queue Management**: Manage pending, processing, and completed jobs
-- **Large File Support**: Handle files up to 10GB
+- **Large File Support**: Handle files up to 10GB with automatic chunked transcription
 - **Docker Ready**: Run anywhere with official Docker images available on DockerHub
 
 ## Tech Stack
@@ -18,22 +19,19 @@ A full-stack web application that generates SRT subtitle files from audio and vi
 - **React 19** - UI framework
 - **Vite 7** - Build tool with HMR
 - **Tailwind CSS 4** - Styling
-- **Axios** - HTTP client
 
 ### Backend
-- **Node.js** - Runtime
+- **Node.js 20** - Runtime
 - **Express 4** - Web framework
 - **Multer** - File upload handling
-- **GROQ API** - AI transcription provider
+- **GROQ API** - Whisper large-v3 transcription and Llama 3.3 70b translation
 - **FFmpeg** - Audio/video processing
-- **dotenv** - Environment configuration
 
 ## Prerequisites
 
-Before running the application, you'll need:
-
-- Node.js 16+ and npm
-- API key from [GROQ API](https://console.groq.com)
+- Node.js 18+ and npm
+- FFmpeg installed and available in PATH
+- API key from [GROQ](https://console.groq.com)
 
 ## Installation
 
@@ -58,11 +56,9 @@ Before running the application, you'll need:
    GROQ_API_KEY=gsk_your-groq-key-here
    ```
 
-   ⚠️ **Important**: Never commit the `.env` file. Keep your API keys private!
-
 ## Docker Deployment
 
-Run with Docker using our official image:
+Run with Docker using the official image:
 
 ```bash
 docker run -p 3001:3001 -e GROQ_API_KEY=gsk_your-key-here gasbostation/subtleai:latest
@@ -98,13 +94,13 @@ npm run dev:server    # Express server only (with nodemon)
 
 ## Production Build
 
-Build the application for production:
+Build the client for production:
 
 ```bash
-npm run build
+npm -w client run build
 ```
 
-This compiles both client and server, with the client built to `client/dist` and the server configured to serve static assets.
+The client is built to `client/dist`. The server serves these static assets in production.
 
 ## Project Structure
 
@@ -116,56 +112,56 @@ subtleai/
 ├── client/                # React frontend
 │   ├── src/
 │   │   ├── components/    # React components
-│   │   ├── services/      # API service functions
+│   │   ├── services/      # API client (fetch + NDJSON streaming)
 │   │   ├── hooks/         # Custom hooks (useJobQueue)
 │   │   └── App.jsx        # Main app component
-│   ├── package.json       # Frontend dependencies
-│   └── vite.config.js     # Vite configuration
+│   ├── package.json
+│   └── vite.config.js
 │
 ├── server/                # Express backend
 │   ├── src/
 │   │   ├── routes/        # API routes (transcribe, download, config)
-│   │   ├── middleware/    # Express middleware (upload)
+│   │   ├── middleware/     # Express middleware (upload)
 │   │   ├── services/      # Business logic (transcription, translation, storage)
 │   │   ├── config/        # Configuration files
 │   │   └── index.js       # Express server entry point
-│   └── package.json       # Server dependencies
+│   └── package.json
 │
-├── Dockerfile             # Docker image definition
+├── Dockerfile             # Multi-stage Docker build
 ├── docker-compose.yml     # Docker Compose configuration
 ├── .env.example           # Example environment variables
 ├── .releaserc.json        # Semantic versioning config
-├── package.json           # Root workspace configuration
-└── README.md              # This file
+└── package.json           # Root workspace configuration
 ```
 
 ## API Endpoints
 
 ### POST `/api/transcribe`
-Transcribe an audio/video file to SRT subtitles.
+Transcribe an audio/video file to SRT subtitles. Returns an NDJSON stream with progress events and the final result.
 
-**Parameters:**
+**Parameters (multipart/form-data):**
 - `audio` (file, required) - Audio or video file
 - `sourceLanguage` (string) - Language code or "auto" for auto-detect
 - `outputLanguage` (string) - Target language code (e.g., "en", "es", "fr")
+- `jobId` (string, optional) - Job ID for server-side storage and later download
 - `groqApiKey` (string, optional) - Client-provided GROQ API key
 
-**Response:**
+**NDJSON stream events:**
 ```json
-{
-  "jobId": "unique-job-id",
-  "detectedLanguage": "en",
-  "duration": 3600
-}
+{"type": "progress", "step": "transcribing", "message": "Transcribing chunk 1 of 3...", "chunk": 1, "totalChunks": 3}
+{"type": "result", "srt": "...", "jobId": "...", "detectedLanguage": "en", "duration": 3600}
 ```
 
 ### GET `/api/download/:jobId`
 Download the generated SRT file.
 
+### GET `/api/config`
+Returns server configuration (whether a GROQ API key is configured server-side).
+
 ## Usage
 
 1. **Open the app** at http://localhost:5173
-2. **Enter API Key** (optional - use server's key if not provided)
+2. **Enter API Key** (optional if configured on server)
 3. **Drop files** or click to upload audio/video files
 4. **Select languages** - source (auto-detect available) and target language
 5. **Generate SRT** - Click the button to start processing
@@ -173,7 +169,7 @@ Download the generated SRT file.
 
 ## Configuration
 
-Create a `.env` file in the root directory with the required and optional variables:
+Create a `.env` file in the root directory:
 
 ### Required
 - **GROQ_API_KEY**: Your GROQ API key (get from https://console.groq.com)
@@ -191,35 +187,17 @@ PORT=3001
 LOG_LEVEL=INFO
 ```
 
-## Error Handling
-
-The application handles common errors gracefully:
-
-- **File too large** - Maximum 10GB per file
-- **Unsupported format** - Only audio/video files accepted
-- **API errors** - Detailed error messages shown in UI
-- **Network failures** - Automatic retry with exponential backoff
-
 ## Browser Support
 
-- Chrome/Edge 90+
-- Firefox 88+
-- Safari 14+
-- Any modern browser with ES2020+ support
-
-## Performance
-
-- **Concurrent Processing**: Up to 3 files processed simultaneously
-- **File Uploads**: Chunked upload for large files
-- **Storage Cleanup**: Automatic cleanup of temporary files after 24 hours
-- **Real-time Progress**: Server-sent events or polling for job status
+- Chrome/Edge 116+
+- Firefox 124+
+- Safari 17.4+
 
 ## Troubleshooting
 
 ### API Key Issues
 - Ensure GROQ API key is valid and not expired
 - Check GROQ dashboard for usage limits and remaining quota
-- Regenerate key if experiencing authentication errors
 
 ### Upload Failures
 - Verify file format is supported (MP3, WAV, MP4, WebM, etc.)
@@ -229,32 +207,17 @@ The application handles common errors gracefully:
 ### Build Issues
 - Clear `node_modules` and reinstall: `rm -rf node_modules package-lock.json && npm install`
 - Clear Vite cache: `rm -rf client/dist .vite`
-- Update Node.js to version 16 or higher
+- Ensure Node.js 18+ is installed
 
 ## Versioning
 
 This project follows [Semantic Versioning](https://semver.org/). Versions are automatically generated based on conventional commits:
-- `fix:` → patch version (1.0.0 → 1.0.1)
-- `feat:` → minor version (1.0.0 → 1.1.0)
-- `BREAKING CHANGE:` → major version (1.0.0 → 2.0.0)
+- `fix:` → patch (1.0.0 → 1.0.1)
+- `feat:` → minor (1.0.0 → 1.1.0)
+- `BREAKING CHANGE:` → major (1.0.0 → 2.0.0)
 
-See [Releases](https://github.com/albrtbc/subtleai/releases) for changelog and version history.
-
-## Docker Hub
-
-Official Docker images available at:
-- [gasbostation/subtleai:latest](https://hub.docker.com/repository/docker/gasbostation/subtleai)
-- [gasbostation/subtleai:1.0.2](https://hub.docker.com/repository/docker/gasbostation/subtleai)
-- [gasbostation/subtleai:1.0](https://hub.docker.com/repository/docker/gasbostation/subtleai)
+See [Releases](https://github.com/albrtbc/subtleai/releases) for changelog.
 
 ## License
 
-MIT License - See LICENSE file for details
-
-## Support
-
-For issues or questions, please open an issue on the [GitHub repository](https://github.com/albrtbc/subtleai/issues).
-
----
-
-**Note**: This application requires a valid GROQ API key to function. Keep your API keys secure and never commit them to version control.
+MIT License - See LICENSE file for details.

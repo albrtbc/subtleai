@@ -5,3 +5,4 @@ server/srt-output/
 .env
 
 .claude/
+CLAUDE.md
