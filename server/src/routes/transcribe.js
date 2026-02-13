@@ -11,23 +11,57 @@ const videoConverter = require('../services/videoConverter');
 const { isValidLanguage } = require('../config/languages');
 
 function sendProgress(res, data) {
-  res.write(JSON.stringify({ type: 'progress', ...data }) + '\n');
+  if (res.writableEnded) return;
+  try {
+    res.write(JSON.stringify({ type: 'progress', ...data }) + '\n');
+  } catch {
+    // Client disconnected, ignore
+  }
 }
 
 function sendResult(res, data) {
-  res.write(JSON.stringify({ type: 'result', ...data }) + '\n');
-  res.end();
+  if (res.writableEnded) return;
+  try {
+    res.write(JSON.stringify({ type: 'result', ...data }) + '\n');
+    res.end();
+  } catch {
+    // Client disconnected, ignore
+  }
 }
 
 function sendError(res, error) {
-  res.write(JSON.stringify({ type: 'error', error }) + '\n');
-  res.end();
+  if (res.writableEnded) return;
+  try {
+    res.write(JSON.stringify({ type: 'error', error }) + '\n');
+    res.end();
+  } catch {
+    // Client disconnected, ignore
+  }
+}
+
+function checkCancelled(signal) {
+  if (signal.aborted) {
+    const err = new Error('Job cancelled');
+    err.code = 'CANCELLED';
+    throw err;
+  }
 }
 
 router.post('/', upload.single('audio'), async (req, res) => {
   res.setHeader('Content-Type', 'application/x-ndjson');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Transfer-Encoding', 'chunked');
+
+  // Cancellation support: abort when client disconnects
+  const abortController = new AbortController();
+  const signal = abortController.signal;
+
+  res.on('close', () => {
+    if (!res.writableFinished) {
+      console.log('[pipeline] Client disconnected, cancelling job');
+      abortController.abort();
+    }
+  });
 
   let audioPath = null;
 
@@ -69,6 +103,8 @@ router.post('/', upload.single('audio'), async (req, res) => {
       audioPath = await videoConverter.extractAudio(file.path);
     }
 
+    checkCancelled(signal);
+
     // Step 1: Transcribe with Whisper large-v3 via Groq
     sendProgress(res, {
       step: 'transcribing',
@@ -91,12 +127,17 @@ router.post('/', upload.single('audio'), async (req, res) => {
           totalChunks,
         });
       },
+      signal,
     );
+
+    checkCancelled(signal);
 
     // Step 2: Format to SRT
     let srtContent = srtFormatter.toSrt(transcription.segments);
     const lastSeg = transcription.segments[transcription.segments.length - 1];
     console.log(`[pipeline] After transcription: ${transcription.segments.length} segments, last ends at ${lastSeg ? lastSeg.end.toFixed(1) : 0}s`);
+
+    checkCancelled(signal);
 
     // Step 3: Translate if needed
     const detectedLanguage = transcription.language;
@@ -112,11 +153,13 @@ router.post('/', upload.single('audio'), async (req, res) => {
         step: 'translating',
         message: `Translating subtitles to ${outputLanguage}...`,
       });
-      srtContent = await translator.translate(srtContent, detectedLanguage, outputLanguage, groqApiKey);
+      srtContent = await translator.translate(srtContent, detectedLanguage, outputLanguage, groqApiKey, signal);
       const afterTranslate = srtFormatter.parseSrt(srtContent);
       const lastTransSeg = afterTranslate[afterTranslate.length - 1];
       console.log(`[pipeline] After translation: ${afterTranslate.length} segments, last ends at ${lastTransSeg ? lastTransSeg.end.toFixed(1) : 0}s`);
     }
+
+    checkCancelled(signal);
 
     // Step 4: Restructure (after translation so it accounts for translated text length)
     sendProgress(res, {
@@ -152,11 +195,18 @@ router.post('/', upload.single('audio'), async (req, res) => {
       duration: transcription.duration,
     });
   } catch (err) {
-    console.error(err);
     if (req.file) fs.unlink(req.file.path, () => {});
     if (audioPath && audioPath !== req.file?.path) {
       fs.unlink(audioPath, () => {});
     }
+
+    if (err.code === 'CANCELLED' || signal.aborted) {
+      console.log('[pipeline] Job cancelled, cleaned up temp files');
+      if (!res.writableEnded) res.end();
+      return;
+    }
+
+    console.error(err);
     sendError(res, err.message || 'Internal server error');
   }
 });

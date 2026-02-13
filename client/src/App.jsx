@@ -42,6 +42,7 @@ export default function App() {
   const processJobRef = useRef();
   const processNextJobsRef = useRef();
   const lastProcessingCountRef = useRef(0);
+  const abortControllersRef = useRef(new Map());
 
   // Check if server has API key configured on mount
   useEffect(() => {
@@ -95,6 +96,9 @@ export default function App() {
       updateJobStatus(job.id, 'processing');
       updateJobProgress(job.id, { step: 'transcribing', message: 'Uploading...', chunk: 0, totalChunks: 0 });
 
+      const abortController = new AbortController();
+      abortControllersRef.current.set(job.id, abortController);
+
       const formData = new FormData();
       formData.append('audio', job.file);
       formData.append('sourceLanguage', sourceLanguage);
@@ -109,7 +113,7 @@ export default function App() {
             chunk: event.chunk,
             totalChunks: event.totalChunks,
           });
-        }, job.id);
+        }, job.id, { signal: abortController.signal });
 
         updateJobResult(job.id, {
           jobId: result.jobId,
@@ -117,7 +121,11 @@ export default function App() {
           duration: result.duration,
         });
       } catch (err) {
-        updateJobError(job.id, err.message || 'An error occurred');
+        if (!abortController.signal.aborted) {
+          updateJobError(job.id, err.message || 'An error occurred');
+        }
+      } finally {
+        abortControllersRef.current.delete(job.id);
       }
     };
   }, [sourceLanguage, outputLanguage, groqKey, updateJobStatus, updateJobProgress, updateJobResult, updateJobError]);
@@ -135,6 +143,15 @@ export default function App() {
     },
     [addJobs],
   );
+
+  const handleRemoveJob = useCallback((jobId) => {
+    const controller = abortControllersRef.current.get(jobId);
+    if (controller) {
+      controller.abort();
+      abortControllersRef.current.delete(jobId);
+    }
+    removeJob(jobId);
+  }, [removeJob]);
 
   const handleRetry = useCallback(
     (jobId) => {
@@ -200,7 +217,7 @@ export default function App() {
         )}
         <FileJobList
           jobs={jobs}
-          onRemoveJob={removeJob}
+          onRemoveJob={handleRemoveJob}
           onRetryJob={handleRetry}
           onClearCompleted={clearCompleted}
           onCancelPending={cancelPending}

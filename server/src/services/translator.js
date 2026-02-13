@@ -11,7 +11,8 @@ const SYSTEM_PROMPT = (targetLanguage) =>
 - Do NOT add, remove, merge, or split any subtitle entries
 Output ONLY the translated SRT content with no additional commentary.`;
 
-async function translateBatch(groq, srtBatch, targetLanguage) {
+async function translateBatch(groq, srtBatch, targetLanguage, signal) {
+  const options = signal ? { signal } : {};
   const response = await groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: [
@@ -19,12 +20,12 @@ async function translateBatch(groq, srtBatch, targetLanguage) {
       { role: 'user', content: srtBatch },
     ],
     temperature: 0.3,
-  });
+  }, options);
 
   return response.choices[0].message.content.trim();
 }
 
-async function translate(srtContent, sourceLanguage, targetLanguage, groqApiKey) {
+async function translate(srtContent, sourceLanguage, targetLanguage, groqApiKey, signal) {
   const groq = new OpenAI({
     apiKey: groqApiKey,
     baseURL: GROQ_BASE_URL,
@@ -37,19 +38,25 @@ async function translate(srtContent, sourceLanguage, targetLanguage, groqApiKey)
 
   if (blocks.length <= BATCH_SIZE) {
     // Small enough to translate in one call
-    return await translateBatch(groq, srtContent, targetLanguage);
+    return await translateBatch(groq, srtContent, targetLanguage, signal);
   }
 
   // Translate in batches to avoid LLM output token limits
   const translatedParts = [];
   for (let i = 0; i < blocks.length; i += BATCH_SIZE) {
+    if (signal?.aborted) {
+      const err = new Error('Job cancelled');
+      err.code = 'CANCELLED';
+      throw err;
+    }
+
     const batchNum = Math.floor(i / BATCH_SIZE) + 1;
     const totalBatches = Math.ceil(blocks.length / BATCH_SIZE);
     const batch = blocks.slice(i, i + BATCH_SIZE).join('\n\n');
 
     console.log(`[translator] Translating batch ${batchNum}/${totalBatches} (entries ${i + 1}-${Math.min(i + BATCH_SIZE, blocks.length)})`);
 
-    const translated = await translateBatch(groq, batch, targetLanguage);
+    const translated = await translateBatch(groq, batch, targetLanguage, signal);
     translatedParts.push(translated);
   }
 
