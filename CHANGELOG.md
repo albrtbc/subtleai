@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/albrtbc/subtleai/compare/v1.1.1...v1.1.2) (2026-02-13)
+
+
+### Bug Fixes
+
+* add UUID fallback for non-secure contexts (HTTP) ([5a77a44](https://github.com/albrtbc/subtleai/commit/5a77a448d4a45d79a8914993abd8401e2f94950e))
+
 ## [1.1.1](https://github.com/albrtbc/subtleai/compare/v1.1.0...v1.1.1) (2026-02-13)
 
 
