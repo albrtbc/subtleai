@@ -1,6 +1,13 @@
 import FileJobItem from './FileJobItem';
 
-export default function FileJobList({ jobs, onRemoveJob, onRetryJob, onClearCompleted, onCancelPending }) {
+export default function FileJobList({
+  jobs,
+  onRemoveJob,
+  onRetryJob,
+  onClearCompleted,
+  onCancelPending,
+  autoDownload,
+}) {
   if (jobs.length === 0) return null;
 
   const completedCount = jobs.filter((j) => j.status === 'completed').length;
@@ -52,6 +59,7 @@ export default function FileJobList({ jobs, onRemoveJob, onRetryJob, onClearComp
             job={job}
             onRemove={() => onRemoveJob(job.id)}
             onRetry={() => onRetryJob(job.id)}
+            autoDownload={autoDownload}
           />
         ))}
       </div>

@@ -28,7 +28,7 @@ app.use((err, req, res, next) => {
   console.error(err);
 
   if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ error: 'File too large. Maximum size is 250MB.' });
+    return res.status(413).json({ error: 'File too large. Maximum size is 10GB.' });
   }
 
   if (err.message && err.message.includes('Unsupported file type')) {

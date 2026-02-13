@@ -3,3 +3,5 @@ dist/
 server/uploads/
 server/srt-output/
 .env
+
+.claude/

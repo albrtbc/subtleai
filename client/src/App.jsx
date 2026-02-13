@@ -3,6 +3,7 @@ import Header from './components/Header';
 import DropZone from './components/DropZone';
 import LanguageSelector from './components/LanguageSelector';
 import ApiKeyInput from './components/ApiKeyInput';
+import AutoDownloadToggle from './components/AutoDownloadToggle';
 import FileJobList from './components/FileJobList';
 import { transcribe } from './services/api';
 import { useJobQueue } from './hooks/useJobQueue';
@@ -14,6 +15,9 @@ export default function App() {
   const [outputLanguage, setOutputLanguage] = useState('en');
   const [groqKey, setGroqKey] = useState(
     () => localStorage.getItem('groq_api_key') || '',
+  );
+  const [autoDownload, setAutoDownload] = useState(
+    () => localStorage.getItem('auto_download') !== 'false',
   );
 
   const {
@@ -35,12 +39,23 @@ export default function App() {
   const jobsRef = useRef(jobs);
   const processJobRef = useRef();
   const processNextJobsRef = useRef();
+  const lastProcessingCountRef = useRef(0);
 
   useEffect(() => {
     jobsRef.current = jobs;
-    // Auto-trigger next jobs processing when jobs array changes
-    // (e.g., when a job completes and status updates)
-    processNextJobsRef.current?.();
+
+    // Only auto-trigger when a job completes/fails (processing count decreased)
+    // Not when new jobs are added (pending count increased)
+    const processingCount = jobs.filter((j) => j.status === 'processing').length;
+    const hadProcessing = lastProcessingCountRef.current > 0;
+    const hasProcessing = processingCount > 0;
+
+    if (hadProcessing && !hasProcessing) {
+      // A job just finished, process next in queue
+      processNextJobsRef.current?.();
+    }
+
+    lastProcessingCountRef.current = processingCount;
   }, [jobs]);
 
   // Keep refs updated with latest closures
@@ -117,6 +132,11 @@ export default function App() {
     localStorage.setItem('groq_api_key', key);
   }, []);
 
+  const handleAutoDownloadChange = useCallback((value) => {
+    setAutoDownload(value);
+    localStorage.setItem('auto_download', String(value));
+  }, []);
+
   const isProcessing = jobs.some((j) => j.status === 'processing');
   const pendingCount = getPendingJobs().length;
 
@@ -131,6 +151,11 @@ export default function App() {
           outputLanguage={outputLanguage}
           onSourceChange={setSourceLanguage}
           onOutputChange={setOutputLanguage}
+          disabled={isProcessing}
+        />
+        <AutoDownloadToggle
+          autoDownload={autoDownload}
+          onChange={handleAutoDownloadChange}
           disabled={isProcessing}
         />
         {jobs.length > 0 && (
@@ -151,6 +176,7 @@ export default function App() {
           onRetryJob={handleRetry}
           onClearCompleted={clearCompleted}
           onCancelPending={cancelPending}
+          autoDownload={autoDownload}
         />
       </main>
     </div>

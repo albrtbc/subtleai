@@ -7,6 +7,7 @@ const srtFormatter = require('../services/srtFormatter');
 const srtRestructurer = require('../services/srtRestructurer');
 const translator = require('../services/translator');
 const storageManager = require('../services/storageManager');
+const videoConverter = require('../services/videoConverter');
 
 function sendProgress(res, data) {
   res.write(JSON.stringify({ type: 'progress', ...data }) + '\n');
@@ -27,6 +28,8 @@ router.post('/', upload.single('audio'), async (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Transfer-Encoding', 'chunked');
 
+  let audioPath = null;
+
   try {
     const file = req.file;
     if (!file) {
@@ -43,6 +46,18 @@ router.post('/', upload.single('audio'), async (req, res) => {
 
     const { sourceLanguage, outputLanguage, jobId } = req.body;
 
+    // Step 0: Extract audio if video file
+    audioPath = file.path;
+    if (videoConverter.isVideo(file.originalname, file.mimetype)) {
+      sendProgress(res, {
+        step: 'transcribing',
+        message: 'Extracting audio from video...',
+        chunk: 0,
+        totalChunks: 0,
+      });
+      audioPath = await videoConverter.extractAudio(file.path);
+    }
+
     // Step 1: Transcribe with Whisper large-v3 via Groq
     sendProgress(res, {
       step: 'transcribing',
@@ -52,7 +67,7 @@ router.post('/', upload.single('audio'), async (req, res) => {
     });
 
     const transcription = await whisperService.transcribe(
-      file.path,
+      audioPath,
       sourceLanguage,
       groqApiKey,
       ({ chunk, totalChunks }) => {
@@ -113,8 +128,11 @@ router.post('/', upload.single('audio'), async (req, res) => {
       });
     }
 
-    // Cleanup uploaded file
+    // Cleanup uploaded file and extracted audio if it exists
     fs.unlink(file.path, () => {});
+    if (audioPath !== file.path) {
+      fs.unlink(audioPath, () => {});
+    }
 
     sendResult(res, {
       srt: srtContent,
@@ -125,6 +143,9 @@ router.post('/', upload.single('audio'), async (req, res) => {
   } catch (err) {
     console.error(err);
     if (req.file) fs.unlink(req.file.path, () => {});
+    if (audioPath && audioPath !== req.file?.path) {
+      fs.unlink(audioPath, () => {});
+    }
     sendError(res, err.message || 'Internal server error');
   }
 });

@@ -24,7 +24,17 @@ function ProgressBar({ progress }) {
   );
 }
 
-export default function FileJobItem({ job, onRemove, onRetry }) {
+import { useEffect } from 'react';
+
+export default function FileJobItem({ job, onRemove, onRetry, autoDownload }) {
+  useEffect(() => {
+    if (autoDownload && job.status === 'completed' && job.id) {
+      // Trigger auto-download
+      const link = document.createElement('a');
+      link.href = `/api/download/${job.id}`;
+      link.click();
+    }
+  }, [job.status, job.id, autoDownload]);
   const statusConfig = {
     pending: { label: 'Queued', color: 'bg-yellow-500/20 text-yellow-400' },
     processing: { label: 'Processing...', color: 'bg-blue-500/20 text-blue-400' },

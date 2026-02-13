@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 
-const MAX_SIZE = 250 * 1024 * 1024;
+const MAX_SIZE = 10 * 1024 * 1024 * 1024; // 10GB
 
 export default function DropZone({ onFilesSelect, disabled }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -58,17 +58,17 @@ export default function DropZone({ onFilesSelect, disabled }) {
       <input
         ref={inputRef}
         type="file"
-        accept="audio/*"
+        accept="audio/*,video/*,.mkv"
         multiple
         onChange={handleInputChange}
         className="hidden"
       />
       <div className="space-y-2">
         <div className="text-4xl text-gray-500">&#x1F3B5;</div>
-        <p className="text-lg">Drag and drop audio files here</p>
+        <p className="text-lg">Drag and drop audio or video files here</p>
         <p className="text-sm text-gray-400">or click to browse</p>
         <p className="text-xs text-gray-500">
-          Supports: MP3, MP4, WAV, WebM, M4A (max 250MB per file)
+          Audio: MP3, WAV, M4A, WebM | Video: MP4, WebM, MKV (max 10GB per file)
         </p>
       </div>
     </div>

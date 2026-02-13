@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SRT_DIR = path.join(__dirname, '../../srt-output');
-const EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
+const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Ensure output directory exists
 if (!fs.existsSync(SRT_DIR)) {

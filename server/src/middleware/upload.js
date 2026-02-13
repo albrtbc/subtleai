@@ -15,6 +15,8 @@ const ALLOWED_TYPES = [
   'video/mp4',
   'video/mpeg',
   'video/webm',
+  'video/x-matroska',
+  'application/x-matroska',
 ];
 
 const storage = multer.diskStorage({
@@ -26,12 +28,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 250 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 * 1024 }, // 10GB
   fileFilter: (req, file, cb) => {
     if (ALLOWED_TYPES.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error(`Unsupported file type: ${file.mimetype}. Supported formats: mp3, mp4, wav, webm, m4a.`));
+      cb(new Error(`Unsupported file type: ${file.mimetype}. Supported: mp3, wav, m4a, webm, mp4, mkv.`));
     }
   },
 });
