@@ -1,3 +1,6 @@
+# SubtleAI - AI-Powered Subtitle Generator
+# Multi-stage build for optimized Docker image
+
 # Stage 1: Build the React client
 FROM node:20-alpine AS client-build
 WORKDIR /app/client
@@ -8,6 +11,11 @@ RUN npm run build
 
 # Stage 2: Production image with ffmpeg
 FROM node:20-alpine
+
+LABEL maintainer="SubtleAI Contributors"
+LABEL description="AI-Powered Subtitle Generator - Transcribe audio/video to SRT"
+LABEL version="1.0.0"
+
 RUN apk add --no-cache ffmpeg
 WORKDIR /app
 
@@ -25,4 +33,8 @@ COPY --from=client-build /app/client/dist ./client/dist
 RUN mkdir -p server/uploads server/srt-output
 
 EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/api/config', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
 CMD ["node", "server/src/index.js"]
