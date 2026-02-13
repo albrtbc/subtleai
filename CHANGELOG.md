@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/albrtbc/subtleai/compare/v1.0.0...v1.0.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* improve docker tagging and stability ([31912cc](https://github.com/albrtbc/subtleai/commit/31912ccc70ffebc688f98fb913c272ad8a9d6b60))
+* refine docker image tagging strategy ([fbbe7a3](https://github.com/albrtbc/subtleai/commit/fbbe7a31291dec3e082f56306eacbb96a5a1f970))
+
 # 1.0.0 (2026-02-13)
 
 
