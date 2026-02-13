@@ -1,3 +1,16 @@
+# [1.1.0](https://github.com/albrtbc/subtleai/compare/v1.0.4...v1.1.0) (2026-02-13)
+
+
+### Bug Fixes
+
+* **ci:** add fetch-depth 0 for gitleaks to access full git history ([84d55f1](https://github.com/albrtbc/subtleai/commit/84d55f18089844805a9ee96a4132e57cf5e07e37))
+* **ci:** fix gitleaks GITHUB_TOKEN and remove broken CodeRabbit action ([3068f3b](https://github.com/albrtbc/subtleai/commit/3068f3bc76271c199324168ab07c55e46d25a82d))
+
+
+### Features
+
+* cancel in-progress transcription jobs to avoid unnecessary API costs ([f90e732](https://github.com/albrtbc/subtleai/commit/f90e7324b5b834bf00dfd411219e8f45d41b7748))
+
 ## [1.0.4](https://github.com/albrtbc/subtleai/compare/v1.0.3...v1.0.4) (2026-02-13)
 
 
