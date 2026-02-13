@@ -8,6 +8,7 @@ const srtRestructurer = require('../services/srtRestructurer');
 const translator = require('../services/translator');
 const storageManager = require('../services/storageManager');
 const videoConverter = require('../services/videoConverter');
+const { isValidLanguage } = require('../config/languages');
 
 function sendProgress(res, data) {
   res.write(JSON.stringify({ type: 'progress', ...data }) + '\n');
@@ -45,6 +46,16 @@ router.post('/', upload.single('audio'), async (req, res) => {
     }
 
     const { sourceLanguage, outputLanguage, jobId } = req.body;
+
+    // Validate languages
+    if (sourceLanguage && !isValidLanguage(sourceLanguage)) {
+      fs.unlink(file.path, () => {});
+      return res.status(400).json({ error: `Invalid source language: ${sourceLanguage}` });
+    }
+    if (outputLanguage && !isValidLanguage(outputLanguage)) {
+      fs.unlink(file.path, () => {});
+      return res.status(400).json({ error: `Invalid output language: ${outputLanguage}` });
+    }
 
     // Step 0: Extract audio if video file
     audioPath = file.path;

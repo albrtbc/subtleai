@@ -1,6 +1,6 @@
-# SRT Generator
+# SubtleAI
 
-A full-stack web application that generates SRT subtitle files from audio and video files using AI-powered transcription. Built with React, Express, and powered by GROQ and OpenAI APIs.
+A full-stack web application that generates SRT subtitle files from audio and video files using AI-powered transcription. Built with React, Express, and powered by GROQ APIs.
 
 ## Features
 
@@ -32,9 +32,7 @@ A full-stack web application that generates SRT subtitle files from audio and vi
 Before running the application, you'll need:
 
 - Node.js 16+ and npm
-- API keys from at least one of these services:
-  - [GROQ API](https://console.groq.com) (recommended for free tier)
-  - [OpenAI API](https://platform.openai.com/api-keys)
+- API key from [GROQ API](https://console.groq.com)
 
 ## Installation
 
@@ -151,17 +149,23 @@ Download the generated SRT file.
 
 ## Configuration
 
-The `.env` file supports these variables:
+Create a `.env` file in the root directory with the required and optional variables:
 
+### Required
+- **GROQ_API_KEY**: Your GROQ API key (get from https://console.groq.com)
+
+### Optional
+- **CORS_ORIGIN**: CORS origin for production (default: `http://localhost:5173`)
+- **PORT**: Server port (default: `3001`)
+- **LOG_LEVEL**: Logging level - DEBUG, INFO, WARN, ERROR (default: `INFO`)
+
+Example:
 ```
-GROQ_API_KEY=your_groq_api_key
-OPENAI_API_KEY=your_openai_api_key
+GROQ_API_KEY=gsk_your-key-here
+CORS_ORIGIN=https://yourdomain.com
 PORT=3001
+LOG_LEVEL=INFO
 ```
-
-### Optional Configuration
-- **PORT**: Server port (default: 3001)
-- **Client dev port**: http://localhost:5173 (configured in Vite)
 
 ## Error Handling
 

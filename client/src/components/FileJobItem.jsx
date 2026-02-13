@@ -29,10 +29,20 @@ import { useEffect } from 'react';
 export default function FileJobItem({ job, onRemove, onRetry, autoDownload }) {
   useEffect(() => {
     if (autoDownload && job.status === 'completed' && job.id) {
-      // Trigger auto-download
-      const link = document.createElement('a');
-      link.href = `/api/download/${job.id}`;
-      link.click();
+      // Trigger auto-download with small delay to ensure file is ready
+      const timer = setTimeout(() => {
+        try {
+          const link = document.createElement('a');
+          link.href = `/api/download/${job.id}`;
+          link.download = '';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch (err) {
+          console.warn('Auto-download failed for job', job.id, err);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
     }
   }, [job.status, job.id, autoDownload]);
   const statusConfig = {

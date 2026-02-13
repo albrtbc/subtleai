@@ -11,7 +11,7 @@ export default function DropZone({ onFilesSelect, disabled }) {
       const valid = [];
       for (const f of fileList) {
         if (f.size > MAX_SIZE) {
-          alert(`"${f.name}" is too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is 250MB.`);
+          alert(`"${f.name}" is too large (${(f.size / 1024 / 1024 / 1024).toFixed(2)}GB). Maximum is 10GB.`);
         } else {
           valid.push(f);
         }

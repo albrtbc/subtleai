@@ -14,7 +14,7 @@ export default function App() {
   const [sourceLanguage, setSourceLanguage] = useState('auto');
   const [outputLanguage, setOutputLanguage] = useState('en');
   const [groqKey, setGroqKey] = useState(
-    () => localStorage.getItem('groq_api_key') || '',
+    () => sessionStorage.getItem('groq_api_key') || '',
   );
   const [autoDownload, setAutoDownload] = useState(
     () => localStorage.getItem('auto_download') !== 'false',
@@ -129,7 +129,9 @@ export default function App() {
 
   const handleGroqKeyChange = useCallback((key) => {
     setGroqKey(key);
-    localStorage.setItem('groq_api_key', key);
+    // Use sessionStorage instead of localStorage for security
+    // Session storage is cleared when browser closes
+    sessionStorage.setItem('groq_api_key', key);
   }, []);
 
   const handleAutoDownloadChange = useCallback((value) => {

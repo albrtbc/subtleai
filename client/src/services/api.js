@@ -11,10 +11,17 @@ export async function transcribe(formData, onProgress, jobId) {
   if (jobId) {
     formData.append('jobId', jobId);
   }
-  const response = await fetch('/api/transcribe', {
-    method: 'POST',
-    body: formData,
-  });
+
+  // Create AbortController for timeout (30 minutes max for large files)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30 * 60 * 1000);
+
+  try {
+    const response = await fetch('/api/transcribe', {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
 
   if (!response.ok && !response.body) {
     throw new Error(`Server error: ${response.status}`);
@@ -65,9 +72,17 @@ export async function transcribe(formData, onProgress, jobId) {
     }
   }
 
-  if (!result) {
-    throw new Error('No result received from server');
-  }
+    if (!result) {
+      throw new Error('No result received from server');
+    }
 
-  return result;
+    return result;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Request timeout - processing took too long (max 30 minutes)');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

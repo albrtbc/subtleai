@@ -17,12 +17,16 @@ router.get('/:jobId', (req, res) => {
   }
 
   const metadata = storageManager.getMetadata(jobId);
-  const filename = metadata?.originalFilename
-    ? metadata.originalFilename.replace(/\.[^.]+$/, '.srt')
-    : 'subtitles.srt';
+  let filename = 'subtitles.srt';
+
+  if (metadata?.originalFilename) {
+    // Sanitize filename to prevent path traversal attacks
+    const basename = require('path').basename(metadata.originalFilename);
+    filename = basename.replace(/\.[^.]+$/, '.srt');
+  }
 
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
   res.send(srtContent);
 });
 

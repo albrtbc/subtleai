@@ -1,8 +1,36 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { generateJobId } from '../utils/jobManager';
 
+const JOBS_STORAGE_KEY = 'subtleai_jobs';
+
 export function useJobQueue() {
-  const [jobs, setJobs] = useState([]);
+  // Initialize from sessionStorage if available
+  const [jobs, setJobs] = useState(() => {
+    try {
+      const stored = sessionStorage.getItem(JOBS_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist jobs to sessionStorage whenever they change
+  // Only save if there are pending/processing jobs
+  useEffect(() => {
+    const hasActiveJobs = jobs.some(j => j.status === 'pending' || j.status === 'processing');
+    if (hasActiveJobs) {
+      try {
+        sessionStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
+      } catch {
+        // Session storage may be full or unavailable
+      }
+    } else {
+      // Clear storage when all jobs are done
+      try {
+        sessionStorage.removeItem(JOBS_STORAGE_KEY);
+      } catch {}
+    }
+  }, [jobs]);
 
   const addJobs = useCallback((files) => {
     const newJobs = Array.from(files).map((file) => ({

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 const SRT_DIR = path.join(__dirname, '../../srt-output');
 const EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -35,28 +36,40 @@ function getMetadata(jobId) {
 }
 
 function deleteSrt(jobId) {
-  try { fs.unlinkSync(srtPath(jobId)); } catch {}
-  try { fs.unlinkSync(metaPath(jobId)); } catch {}
+  // Safe to ignore errors here - files may not exist yet
+  try { fs.unlinkSync(srtPath(jobId)); } catch (err) {
+    // File doesn't exist or already deleted - this is expected
+  }
+  try { fs.unlinkSync(metaPath(jobId)); } catch (err) {
+    // Metadata file may not exist - this is expected
+  }
 }
 
 function cleanupExpired() {
   const now = Date.now();
   let deleted = 0;
 
-  const files = fs.readdirSync(SRT_DIR).filter(f => f.endsWith('.json'));
-  for (const file of files) {
-    try {
-      const meta = JSON.parse(fs.readFileSync(path.join(SRT_DIR, file), 'utf-8'));
-      if (now - meta.timestamp > EXPIRY_MS) {
-        const jobId = file.replace('.json', '');
-        deleteSrt(jobId);
-        deleted++;
+  try {
+    const files = fs.readdirSync(SRT_DIR).filter(f => f.endsWith('.json'));
+    for (const file of files) {
+      try {
+        const meta = JSON.parse(fs.readFileSync(path.join(SRT_DIR, file), 'utf-8'));
+        if (now - meta.timestamp > EXPIRY_MS) {
+          const jobId = file.replace('.json', '');
+          deleteSrt(jobId);
+          deleted++;
+        }
+      } catch (err) {
+        // Skip files that can't be parsed - they may be corrupted
+        logger.warn(`Could not parse metadata file: ${file}`, { error: err.message });
       }
-    } catch {}
-  }
+    }
 
-  if (deleted > 0) {
-    console.log(`[cleanup] Deleted ${deleted} expired SRT file(s)`);
+    if (deleted > 0) {
+      logger.info(`Cleanup completed - deleted ${deleted} expired SRT file(s)`);
+    }
+  } catch (err) {
+    logger.error('Cleanup job failed', { error: err.message });
   }
 }
 
