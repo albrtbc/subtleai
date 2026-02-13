@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/albrtbc/subtleai/compare/v1.0.1...v1.0.2) (2026-02-13)
+
+
+### Bug Fixes
+
+* resolve React eslint ref warning and trigger docker build on tag creation ([e8db29a](https://github.com/albrtbc/subtleai/commit/e8db29abbd661dad87bf108362b84249d0bdc8d7))
+
 ## [1.0.1](https://github.com/albrtbc/subtleai/compare/v1.0.0...v1.0.1) (2026-02-13)
 
 
