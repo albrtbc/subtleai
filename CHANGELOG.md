@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/albrtbc/subtleai/compare/v1.1.0...v1.1.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* **ci:** only push Docker tags on release, remove main branch push ([a4e2f7b](https://github.com/albrtbc/subtleai/commit/a4e2f7bb3c144debaa202b9c59d9a6c70052706b))
+
 # [1.1.0](https://github.com/albrtbc/subtleai/compare/v1.0.4...v1.1.0) (2026-02-13)
 
 
