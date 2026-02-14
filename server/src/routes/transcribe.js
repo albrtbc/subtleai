@@ -52,6 +52,8 @@ function checkCancelled(signal) {
 }
 
 router.post('/', upload.single('audio'), async (req, res) => {
+  // Disable request timeout for long-running transcription/translation pipelines
+  req.setTimeout(0);
   res.setHeader('Content-Type', 'application/x-ndjson');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Transfer-Encoding', 'chunked');

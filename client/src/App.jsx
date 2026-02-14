@@ -94,7 +94,7 @@ export default function App() {
         j.id === job.id ? { ...j, status: 'processing', startTime: Date.now() } : j,
       );
       updateJobStatus(job.id, 'processing');
-      updateJobProgress(job.id, { step: 'transcribing', message: 'Uploading...', chunk: 0, totalChunks: 0 });
+      updateJobProgress(job.id, { step: 'uploading', message: 'Uploading...', uploadPercent: 0 });
 
       const abortController = new AbortController();
       abortControllersRef.current.set(job.id, abortController);
@@ -112,6 +112,7 @@ export default function App() {
             message: event.message || '',
             chunk: event.chunk,
             totalChunks: event.totalChunks,
+            uploadPercent: event.uploadPercent,
           });
         }, job.id, { signal: abortController.signal });
 
