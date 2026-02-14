@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/albrtbc/subtleai/compare/v1.2.0...v1.2.1) (2026-02-14)
+
+
+### Bug Fixes
+
+* stream NDJSON response incrementally and restore headers timeout ([088d5d1](https://github.com/albrtbc/subtleai/commit/088d5d1440e98941edfc2b9208a974189003bbd2))
+
 # [1.2.0](https://github.com/albrtbc/subtleai/compare/v1.1.2...v1.2.0) (2026-02-14)
 
 
