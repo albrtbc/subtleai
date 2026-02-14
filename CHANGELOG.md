@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/albrtbc/subtleai/compare/v1.1.2...v1.2.0) (2026-02-14)
+
+
+### Features
+
+* add upload progress tracking and disable server timeouts ([3aa7eac](https://github.com/albrtbc/subtleai/commit/3aa7eac247d76cdb4e23958f87c10bb4c22b7e12))
+
 ## [1.1.2](https://github.com/albrtbc/subtleai/compare/v1.1.1...v1.1.2) (2026-02-13)
 
 
