@@ -38,23 +38,28 @@ export async function transcribe(formData, onProgress, jobId, { signal } = {}) {
 
 /**
  * Uploads FormData via XMLHttpRequest to track upload progress.
- * Returns the Response object for streaming.
+ * Resolves with a streaming Response as soon as headers arrive,
+ * then streams the response body incrementally via XHR onprogress.
  */
 function uploadWithProgress(formData, onProgress, signal) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     let aborted = false;
+    let streamController = null;
+    let resolved = false;
+    let bytesDelivered = 0;
 
-    // Handle cancellation
     if (signal) {
       signal.addEventListener('abort', () => {
         aborted = true;
         xhr.abort();
+        if (streamController) {
+          try { streamController.close(); } catch (_) { /* already closed */ }
+        }
         reject(new Error('Request was cancelled'));
       });
     }
 
-    // Timeout: 60 minutes for very large files
     xhr.timeout = 60 * 60 * 1000;
 
     xhr.upload.onprogress = (e) => {
@@ -69,30 +74,59 @@ function uploadWithProgress(formData, onProgress, signal) {
       }
     };
 
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === XMLHttpRequest.HEADERS_RECEIVED && !resolved && !aborted) {
+        resolved = true;
+        const stream = new ReadableStream({
+          start(controller) {
+            streamController = controller;
+          },
+        });
+        resolve(new Response(stream, {
+          status: xhr.status,
+          statusText: xhr.statusText,
+        }));
+      }
+    };
+
+    xhr.onprogress = () => {
+      if (aborted || !streamController) return;
+      const newText = xhr.responseText.slice(bytesDelivered);
+      if (newText) {
+        streamController.enqueue(new TextEncoder().encode(newText));
+        bytesDelivered = xhr.responseText.length;
+      }
+    };
+
     xhr.onload = () => {
       if (aborted) return;
-      // Convert XHR response to a fetch-like Response for NDJSON reading
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode(xhr.responseText));
-          controller.close();
-        },
-      });
-      resolve(new Response(stream, {
-        status: xhr.status,
-        statusText: xhr.statusText,
-      }));
+      if (streamController) {
+        const remaining = xhr.responseText.slice(bytesDelivered);
+        if (remaining) {
+          streamController.enqueue(new TextEncoder().encode(remaining));
+        }
+        try { streamController.close(); } catch (_) { /* already closed */ }
+      }
     };
 
     xhr.onerror = () => {
-      if (!aborted) reject(new Error('Network error during upload'));
+      if (!aborted) {
+        if (streamController) {
+          try { streamController.error(new Error('Network error during upload')); } catch (_) { /* already errored */ }
+        }
+        if (!resolved) reject(new Error('Network error during upload'));
+      }
     };
 
     xhr.ontimeout = () => {
-      if (!aborted) reject(new Error('Upload timeout - file too large or connection too slow'));
+      if (!aborted) {
+        if (streamController) {
+          try { streamController.error(new Error('Upload timeout - file too large or connection too slow')); } catch (_) { /* already errored */ }
+        }
+        if (!resolved) reject(new Error('Upload timeout - file too large or connection too slow'));
+      }
     };
 
-    // Use responseType text to get full response at once
     xhr.responseType = 'text';
     xhr.open('POST', '/api/transcribe');
     xhr.send(formData);
@@ -108,66 +142,62 @@ function formatBytes(bytes) {
 /**
  * Reads an NDJSON response stream and dispatches progress/result events.
  */
-function readNdjsonStream(response, onProgress, signal) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (!response.ok && !response.body) {
-        throw new Error(`Server error: ${response.status}`);
-      }
+async function readNdjsonStream(response, onProgress, signal) {
+  if (!response.ok && !response.body) {
+    throw new Error(`Server error: ${response.status}`);
+  }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let result = null;
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let result = null;
 
-      while (true) {
-        if (signal?.aborted) throw new Error('Request was cancelled');
+  while (true) {
+    if (signal?.aborted) throw new Error('Request was cancelled');
 
-        const { done, value } = await reader.read();
-        if (done) break;
+    const { done, value } = await reader.read();
+    if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const event = JSON.parse(line);
-            if (event.type === 'progress' && onProgress) {
-              onProgress(event);
-            } else if (event.type === 'result') {
-              result = event;
-            } else if (event.type === 'error') {
-              throw new Error(event.error);
-            }
-          } catch (err) {
-            if (err.message && !err.message.startsWith('Unexpected token')) {
-              throw err;
-            }
-          }
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const event = JSON.parse(line);
+        if (event.type === 'progress' && onProgress) {
+          onProgress(event);
+        } else if (event.type === 'result') {
+          result = event;
+        } else if (event.type === 'error') {
+          throw new Error(event.error);
+        }
+      } catch (err) {
+        if (err.message && !err.message.startsWith('Unexpected token')) {
+          throw err;
         }
       }
-
-      if (buffer.trim()) {
-        try {
-          const event = JSON.parse(buffer);
-          if (event.type === 'result') result = event;
-          if (event.type === 'error') throw new Error(event.error);
-        } catch (err) {
-          if (err.message && !err.message.startsWith('Unexpected token')) {
-            throw err;
-          }
-        }
-      }
-
-      if (!result) {
-        throw new Error('No result received from server');
-      }
-
-      resolve(result);
-    } catch (err) {
-      reject(err);
     }
-  });
+  }
+
+  if (buffer.trim()) {
+    try {
+      const event = JSON.parse(buffer);
+      if (event.type === 'result') result = event;
+      if (event.type === 'error') throw new Error(event.error);
+    } catch (err) {
+      if (err.message && !err.message.startsWith('Unexpected token')) {
+        throw err;
+      }
+    }
+  }
+
+  if (signal?.aborted) throw new Error('Request was cancelled');
+
+  if (!result) {
+    throw new Error('No result received from server');
+  }
+
+  return result;
 }

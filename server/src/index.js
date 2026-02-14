@@ -73,6 +73,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 });
 
 // Allow long-running requests (transcription + translation can take 30+ minutes for large files)
+// Per-request overrides (req.setTimeout(0)) in transcribe.js handle individual long jobs
 server.timeout = 0;
-server.headersTimeout = 0;
+server.headersTimeout = 60000;
 server.requestTimeout = 0;
