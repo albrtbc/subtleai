@@ -67,7 +67,12 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message || 'Internal server error' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   logger.info(`SubtleAI server running on http://localhost:${PORT}`);
   cleanup.startCleanupJob();
 });
+
+// Allow long-running requests (transcription + translation can take 30+ minutes for large files)
+server.timeout = 0;
+server.headersTimeout = 0;
+server.requestTimeout = 0;

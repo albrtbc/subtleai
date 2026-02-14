@@ -1,11 +1,12 @@
 const STEPS = [
+  { key: 'uploading', label: 'Upload' },
   { key: 'transcribing', label: 'Transcribe' },
   { key: 'translating', label: 'Translate' },
   { key: 'restructuring', label: 'Restructure' },
   { key: 'done', label: 'Done' },
 ];
 
-export default function ProgressStatus({ step, message, chunk, totalChunks, error }) {
+export default function ProgressStatus({ step, message, chunk, totalChunks, uploadPercent, error }) {
   if (!step) return null;
 
   const currentIdx = STEPS.findIndex((s) => s.key === step);
@@ -22,7 +23,9 @@ export default function ProgressStatus({ step, message, chunk, totalChunks, erro
     const completedSteps = currentIdx;
     let withinStepProgress = 0;
 
-    if (step === 'transcribing' && totalChunks > 0) {
+    if (step === 'uploading' && uploadPercent != null) {
+      withinStepProgress = uploadPercent / 100;
+    } else if (step === 'transcribing' && totalChunks > 0) {
       withinStepProgress = ((chunk - 1) / totalChunks);
     } else if (isProcessing) {
       withinStepProgress = 0.5; // halfway through current step as estimate
