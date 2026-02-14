@@ -1,13 +1,15 @@
-const STEPS = ['transcribing', 'translating', 'restructuring', 'done'];
+const STEPS = ['uploading', 'transcribing', 'translating', 'restructuring', 'done'];
 
 function ProgressBar({ progress }) {
   if (!progress) return null;
 
-  const { step, chunk, totalChunks } = progress;
+  const { step, chunk, totalChunks, uploadPercent } = progress;
   const stepIdx = STEPS.indexOf(step);
   const stepWeight = 100 / (STEPS.length - 1);
   let withinStep = 0;
-  if (step === 'transcribing' && totalChunks > 0) {
+  if (step === 'uploading' && uploadPercent != null) {
+    withinStep = uploadPercent / 100;
+  } else if (step === 'transcribing' && totalChunks > 0) {
     withinStep = (chunk - 1) / totalChunks;
   } else {
     withinStep = 0.5;
