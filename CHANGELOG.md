@@ -1,3 +1,10 @@
+## [1.2.2](https://github.com/albrtbc/subtleai/compare/v1.2.1...v1.2.2) (2026-02-22)
+
+
+### Bug Fixes
+
+* healthcheck process exit and add README badges ([9813bff](https://github.com/albrtbc/subtleai/commit/9813bff07ccbe300b1394200c93a092eb791559d))
+
 ## [1.2.1](https://github.com/albrtbc/subtleai/compare/v1.2.0...v1.2.1) (2026-02-14)
 
 
