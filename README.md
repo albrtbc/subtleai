@@ -1,5 +1,13 @@
 # SubtleAI
 
+[![Release](https://github.com/albrtbc/subtleai/actions/workflows/release.yml/badge.svg)](https://github.com/albrtbc/subtleai/actions/workflows/release.yml)
+[![CI](https://github.com/albrtbc/subtleai/actions/workflows/main-checks.yml/badge.svg)](https://github.com/albrtbc/subtleai/actions/workflows/main-checks.yml)
+[![Latest Release](https://img.shields.io/github/v/release/albrtbc/subtleai?label=version)](https://github.com/albrtbc/subtleai/releases/latest)
+[![Docker](https://img.shields.io/docker/pulls/gasbostation/subtleai)](https://hub.docker.com/r/gasbostation/subtleai)
+![Node.js](https://img.shields.io/badge/Node.js-18+-339933)
+![React](https://img.shields.io/badge/React-19-61DAFB)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A full-stack web application that generates SRT subtitle files from audio and video files using AI-powered transcription. Built with React, Express, and powered by GROQ API.
 
 ## Features
